@@ -22,7 +22,9 @@ contract Mute is MuteGovernance {
     address private _owner = address(0);
     mapping (address => bool) private _minters;
 
-    uint256 public vaultThreshold = 10000e18; // 10k mute
+    uint256 public vaultThreshold;
+
+    address public _dao;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -37,16 +39,13 @@ contract Mute is MuteGovernance {
         _;
     }
 
-    function initialize() external {
-        require(_owner == address(0), "Mute::Initialize: Contract has already been initialized");
-        _owner = msg.sender;
-        _name = "Mute.io";
-        _symbol = "MUTE";
-        _decimals = 18;
+    modifier onlyDAO() {
+        require(_owner == msg.sender || _dao == msg.sender, "onlyDAO: caller is not the dao");
+        _;
     }
 
-    function setVaultThreshold(uint256 _vaultThreshold) external onlyOwner {
-        vaultThreshold = _vaultThreshold;
+    function setDAO(address dao) external onlyOwner {
+        _dao = dao;
     }
 
     function addMinter(address account) external onlyOwner {
@@ -59,15 +58,19 @@ contract Mute is MuteGovernance {
         _minters[account] = false;
     }
 
-    function setTaxReceiveAddress(address _taxReceiveAddress) external onlyOwner {
+    function setVaultThreshold(uint256 _vaultThreshold) external onlyDao {
+        vaultThreshold = _vaultThreshold;
+    }
+
+    function setTaxReceiveAddress(address _taxReceiveAddress) external onlyDao {
         taxReceiveAddress = _taxReceiveAddress;
     }
 
-    function setAddressTax(address _address, bool ignoreTax) external onlyOwner {
+    function setAddressTax(address _address, bool ignoreTax) external onlyDao {
         nonTaxedAddresses[_address] = ignoreTax;
     }
 
-    function setTaxFraction(uint16 _tax_fraction) external onlyOwner {
+    function setTaxFraction(uint16 _tax_fraction) external onlyDao {
         TAX_FRACTION = _tax_fraction;
     }
 

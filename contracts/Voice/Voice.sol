@@ -4,9 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "../Utils/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
-
 import "@openzeppelin/contracts-ethereum-package/contracts/GSN/Context.sol";
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/Initializable.sol";
 
@@ -18,7 +16,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/Initializable.sol";
  *      will be taxed at a rate of 1% paid out in VOICE to the taxReceiveAddress.
  *
  */
-contract Voice is Initializable, ContextUpgradeSafe, IERC20, OwnableUpgradeSafe {
+contract Voice is Initializable, ContextUpgradeSafe, OwnableUpgradeSafe {
     using SafeMath for uint256;
     using Address for address;
 
@@ -56,29 +54,44 @@ contract Voice is Initializable, ContextUpgradeSafe, IERC20, OwnableUpgradeSafe 
 
     mapping (address => uint) public nonces;
 
+    uint256 public vaultThreshold;
+
+    address public _dao;
+
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
 
     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
 
     receive() external payable {}
 
-    function rebrand() external onlyOwner {
-        (msg.sender).call{ value: address(this).balance }("");
-
-        _name = "Voice Token";
-        _symbol = "VOICE";
+    modifier onlyDAO() {
+        require(owner() == _msgSender() || _dao == _msgSender(), "onlyDAO: caller is not the dao");
+        _;
     }
 
-    function setTaxReceiveAddress(address _taxReceiveAddress) external onlyOwner {
+    function upgradeContract(address _vault) external onlyOwner {
+        taxReceiveAddress = _vault;
+        TAX_FRACTION = 1;
+    }
+
+    function setTaxReceiveAddress(address _taxReceiveAddress) external onlyDAO {
         taxReceiveAddress = _taxReceiveAddress;
     }
 
-    function setAddressTax(address _address, bool ignoreTax) external onlyOwner {
+    function setAddressTax(address _address, bool ignoreTax) external onlyDAO {
         nonTaxedAddresses[_address] = ignoreTax;
     }
 
-    function _setTaxFraction(uint16 _tax_fraction) internal {
+    function setTaxFraction(uint16 _tax_fraction) external onlyDAO {
         TAX_FRACTION = _tax_fraction;
+    }
+
+    function setVaultThreshold(uint256 _vaultThreshold) external onlyDao {
+        vaultThreshold = _vaultThreshold;
+    }
+
+    function setDAO(address dao) external onlyOwner {
+        _dao = dao;
     }
 
     function name() public view returns (string memory) {
@@ -101,21 +114,21 @@ contract Voice is Initializable, ContextUpgradeSafe, IERC20, OwnableUpgradeSafe 
         return _balances[account];
     }
 
-    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+    function transfer(address recipient, uint256 amount) public returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
-    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+    function allowance(address owner, address spender) public view  returns (uint256) {
         return _allowances[owner][spender];
     }
 
-    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+    function approve(address spender, uint256 amount) public returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
@@ -137,8 +150,13 @@ contract Voice is Initializable, ContextUpgradeSafe, IERC20, OwnableUpgradeSafe 
 
         //do not tax whitelisted addresses
         //do not tax if tax is disabled
-        if(nonTaxedAddresses[sender] == true || TAX_FRACTION == 0){
+        if(nonTaxedAddresses[sender] == true || TAX_FRACTION == 0 ||  || balanceOf(taxReceiveAddress) > vaultThreshold){
           _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
+
+          if(balanceOf(taxReceiveAddress) > vaultThreshold){
+              IMuteVault(taxReceiveAddress).reward();
+          }
+
           _balances[recipient] = _balances[recipient].add(amount);
 
           _moveDelegates(_delegates[sender], _delegates[recipient], amount);
@@ -147,15 +165,16 @@ contract Voice is Initializable, ContextUpgradeSafe, IERC20, OwnableUpgradeSafe 
           return;
         }
 
-        uint256 feeAmount = amount.div(TAX_FRACTION);
+        uint256 feeAmount = amount.mul(TAX_FRACTION).div(100);
+
         uint256 newAmount = amount.sub(feeAmount);
 
-        require(amount == feeAmount.add(newAmount), "ERC20: math is broken");
+        require(amount == feeAmount.add(newAmount), "Voice: math is broken");
 
-        _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
+        _balances[sender] = _balances[sender].sub(amount, "Voice: transfer amount exceeds balance");
         // send amount minus the 1% fee
         _balances[recipient] = _balances[recipient].add(newAmount);
-        // 1% NBT fee to taxReceiveAddress
+        // 1% Voice fee to taxReceiveAddress
         _balances[taxReceiveAddress] = _balances[taxReceiveAddress].add(feeAmount);
 
         _moveDelegates(_delegates[sender], _delegates[recipient], newAmount);
@@ -294,4 +313,8 @@ contract Voice is Initializable, ContextUpgradeSafe, IERC20, OwnableUpgradeSafe 
         assembly { chainId := chainid() }
         return chainId;
     }
+}
+
+interface IMuteVault {
+    function reward() external returns (bool);
 }
