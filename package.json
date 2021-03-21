@@ -20,7 +20,9 @@
   "license": "ISC",
   "author": "dev@mute.io",
   "scripts": {
-    "test": "mocha --exit --recursive test"
+    "test": "mocha --exit --recursive test  --timeout 120000",
+    "test-mute": "mocha --exit --recursive test/Mute.js  --timeout 120000",
+    "test-voice": "mocha --exit --recursive test/Voice.js  --timeout 120000"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.3.0",

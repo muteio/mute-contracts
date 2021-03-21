@@ -1,7 +1,7 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import './../Utils/SafeMath.sol'
+import './../Utils/SafeMath.sol';
 
 contract GovFunding {
     using SafeMath for uint256;
@@ -12,11 +12,11 @@ contract GovFunding {
     /// @notice The name of this contract
     string public constant name = "Governance Funding";
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    uint256 quorumVotes;
+    uint256 public quorumVotes;
     /// @notice The number of votes required in order for a voter to be able to vote
-    uint256 voteRequirement;
+    uint256 public voteRequirement;
     /// @notice The duration of voting on a proposal, in blocks
-    uint256 votingPeriod;
+    uint256 public votingPeriod;
     /// @notice The address of the Voice Gov Coordinator
     address public voiceGov;
     /// @notice The address of the Mute token
@@ -70,11 +70,6 @@ contract GovFunding {
     /// @notice The latest proposal for each proposer
     mapping (address => uint) public latestProposalIds;
 
-    /// @notice The official record of all funding proposals ever proposed
-    mapping (uint256 => Proposal) public proposalsFunding;
-    /// @notice The latest proposal for each proposer
-    mapping (address => uint) public latestProposalIdsFunding;
-
     /// @notice An event emitted when a new proposal is created
     event ProposalCreated(uint256 id, address proposer, bytes data, uint256 startBlock, uint256 endBlock, string description);
     /// @notice An event emitted when a vote has been cast on a proposal
@@ -82,13 +77,13 @@ contract GovFunding {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint256 id);
 
-    constructor(address _voiceGov, address _mute) public {
-        quorumVotes = 4000000e18; // 4,000,000 mute (25% of circ)
+    constructor(address _voiceGov, address _mute, uint256 _votingPeriod) public {
+        quorumVotes = 4000000e18; // 4,000,000 mute (20% of circ)
         voteRequirement = 40000e18; // 40,000 mute
-        votingPeriod = 34560; // ~6 days in blocks (assuming 15s blocks)
+        votingPeriod = _votingPeriod;//34560; // ~6 days in blocks (assuming 15s blocks)
 
         voiceGov = _voiceGov;
-        mute = IMuteContract(mute);
+        mute = IMuteContract(_mute);
     }
 
     function changeQuorumVotes(uint256 _quorumVotes) public {
@@ -106,10 +101,10 @@ contract GovFunding {
         voteRequirement = _voteRequirement;
     }
 
-    function propose(address memory target, bytes memory data, string memory description) public returns (uint) {
+    function propose(address target, bytes memory data, string memory description) public returns (uint) {
         // allow mute holders to change votingPeriod / quorumvotes / voteRequirement
         if(target != address(this)){
-          require(msg.sender == voiceGov, "GovFunding::propose: only voice gov can propose")
+          require(msg.sender == voiceGov, "GovFunding::propose: only voice gov can propose");
         } else {
           require(mute.getPriorVotes(msg.sender, block.number.sub(1)) > voteRequirement, "GovFunding::propose: proposer votes below proposal threshold");
         }

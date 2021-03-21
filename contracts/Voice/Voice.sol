@@ -59,14 +59,31 @@ contract Voice is Initializable, ContextUpgradeSafe, OwnableUpgradeSafe {
     address public _dao;
 
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
-
     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     receive() external payable {}
 
     modifier onlyDAO() {
         require(owner() == _msgSender() || _dao == _msgSender(), "onlyDAO: caller is not the dao");
         _;
+    }
+
+    function initialize() public initializer {
+        _name = "Voice Token";
+        _symbol = "VOICE";
+        _decimals = 18;
+        __Context_init_unchained();
+        __Ownable_init_unchained();
+        isTaxEnabled = false;
+        TAX_FRACTION = 1;
+
+        _balances[msg.sender] = _balances[msg.sender].add(INITIAL_SUPPLY);
+        _totalSupply = _totalSupply.add(INITIAL_SUPPLY);
+        emit Transfer(address(0), msg.sender, INITIAL_SUPPLY);
+
+        nonTaxedAddresses[_msgSender()] = true;
     }
 
     function upgradeContract(address _vault) external onlyOwner {
@@ -86,7 +103,7 @@ contract Voice is Initializable, ContextUpgradeSafe, OwnableUpgradeSafe {
         TAX_FRACTION = _tax_fraction;
     }
 
-    function setVaultThreshold(uint256 _vaultThreshold) external onlyDao {
+    function setVaultThreshold(uint256 _vaultThreshold) external onlyDAO {
         vaultThreshold = _vaultThreshold;
     }
 
@@ -106,11 +123,11 @@ contract Voice is Initializable, ContextUpgradeSafe, OwnableUpgradeSafe {
         return _decimals;
     }
 
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() public view returns (uint256) {
         return _totalSupply;
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) public view returns (uint256) {
         return _balances[account];
     }
 
@@ -150,7 +167,7 @@ contract Voice is Initializable, ContextUpgradeSafe, OwnableUpgradeSafe {
 
         //do not tax whitelisted addresses
         //do not tax if tax is disabled
-        if(nonTaxedAddresses[sender] == true || TAX_FRACTION == 0 ||  || balanceOf(taxReceiveAddress) > vaultThreshold){
+        if(nonTaxedAddresses[sender] == true || TAX_FRACTION == 0 || balanceOf(taxReceiveAddress) > vaultThreshold){
           _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
 
           if(balanceOf(taxReceiveAddress) > vaultThreshold){

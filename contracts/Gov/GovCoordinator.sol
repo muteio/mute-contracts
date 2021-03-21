@@ -1,7 +1,7 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import './../Utils/SafeMath.sol'
+import './../Utils/SafeMath.sol';
 
 contract GovCoordinator {
     using SafeMath for uint256;
@@ -12,11 +12,11 @@ contract GovCoordinator {
     /// @notice The name of this contract
     string public constant name = "Governance Coordinator";
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    uint256 quorumVotes;
+    uint256 public quorumVotes;
     /// @notice The number of votes required in order for a voter to become a proposer
-    uint256 proposalThreshold;
+    uint256 public proposalThreshold;
     /// @notice The duration of voting on a proposal, in blocks
-    uint256 votingPeriod;
+    uint256 public votingPeriod;
     /// @notice The address of the Voice token
     IVoiceContract public voice;
     /// @notice The total number of proposals
@@ -68,11 +68,6 @@ contract GovCoordinator {
     /// @notice The latest proposal for each proposer
     mapping (address => uint) public latestProposalIds;
 
-    /// @notice The official record of all funding proposals ever proposed
-    mapping (uint256 => Proposal) public proposalsFunding;
-    /// @notice The latest proposal for each proposer
-    mapping (address => uint) public latestProposalIdsFunding;
-
     /// @notice An event emitted when a new proposal is created
     event ProposalCreated(uint256 id, address proposer, bytes data, uint256 startBlock, uint256 endBlock, string description);
     /// @notice An event emitted when a vote has been cast on a proposal
@@ -80,10 +75,10 @@ contract GovCoordinator {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint256 id);
 
-    constructor(address _voice) public {
-        quorumVotes = 8750e18; // 8750 voice (25% of circ)
+    constructor(address _voice, uint256 _votingPeriod) public {
+        quorumVotes = 6000e18; // 8750 voice (~20% of circ)
         proposalThreshold = 500e18; // 500 voice
-        votingPeriod = 17280; // ~3 days in blocks (assuming 15s blocks)
+        votingPeriod = _votingPeriod; //17280; // ~3 days in blocks (assuming 15s blocks)
 
         voice = IVoiceContract(_voice);
     }
@@ -103,8 +98,8 @@ contract GovCoordinator {
         votingPeriod = _votingPeriod;
     }
 
-    function propose(address memory target, bytes memory data, string memory description) public returns (uint) {
-        require(voice.getPriorVotes(msg.sender, block.number.sub(1)) > proposalThreshold(), "GovCoordinator::propose: proposer votes below proposal threshold");
+    function propose(address target, bytes memory data, string memory description) public returns (uint) {
+        require(voice.getPriorVotes(msg.sender, block.number.sub(1)) > proposalThreshold, "GovCoordinator::propose: proposer votes below proposal threshold");
 
         uint256 latestProposalId = latestProposalIds[msg.sender];
         if (latestProposalId != 0) {

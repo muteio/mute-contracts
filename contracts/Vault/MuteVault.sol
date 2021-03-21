@@ -13,11 +13,13 @@ contract MuteVault {
     address public token;
     address public geyser;
     uint256 public rewarded;
+    address public owner;
 
     constructor(address _token, address _geyser) public {
         token = _token;
         geyser = _geyser;
         IMute(token).approve(geyser, uint256(-1));
+        owner = msg.sender;
     }
 
     function balance() public view returns (uint256) {
@@ -37,7 +39,7 @@ contract MuteVault {
 
 interface IMute {
     function balanceOf(address account) external view returns (uint256);
-    function approve(address spender, uint256 amount) external returns (bool) {
+    function approve(address spender, uint256 amount) external returns (bool);
 }
 
 interface ITokenGeyser {

@@ -44,6 +44,17 @@ contract Mute is MuteGovernance {
         _;
     }
 
+    function initialize() public {
+        require(_owner == address(0), "Mute::Initialize: Contract has already been initialized");
+        _owner = msg.sender;
+        _name = "Mute.io";
+        _symbol = "MUTE";
+        _decimals = 18;
+        TAX_FRACTION = 1;
+        vaultThreshold = 10000 * 10 ** 18;
+        nonTaxedAddresses[msg.sender] = true;
+    }
+
     function setDAO(address dao) external onlyOwner {
         _dao = dao;
     }
@@ -58,19 +69,19 @@ contract Mute is MuteGovernance {
         _minters[account] = false;
     }
 
-    function setVaultThreshold(uint256 _vaultThreshold) external onlyDao {
+    function setVaultThreshold(uint256 _vaultThreshold) external onlyDAO {
         vaultThreshold = _vaultThreshold;
     }
 
-    function setTaxReceiveAddress(address _taxReceiveAddress) external onlyDao {
+    function setTaxReceiveAddress(address _taxReceiveAddress) external onlyDAO {
         taxReceiveAddress = _taxReceiveAddress;
     }
 
-    function setAddressTax(address _address, bool ignoreTax) external onlyDao {
+    function setAddressTax(address _address, bool ignoreTax) external onlyDAO {
         nonTaxedAddresses[_address] = ignoreTax;
     }
 
-    function setTaxFraction(uint16 _tax_fraction) external onlyDao {
+    function setTaxFraction(uint16 _tax_fraction) external onlyDAO {
         TAX_FRACTION = _tax_fraction;
     }
 
