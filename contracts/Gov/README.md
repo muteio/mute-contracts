@@ -42,7 +42,7 @@
 
 
 
-# Contract Heirarchy
+# Contract Hierarchy
 
 GovCoordinator:
 - Admin of Voice Upgradeable Contract Implementation
