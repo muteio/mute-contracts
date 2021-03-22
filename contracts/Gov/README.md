@@ -47,7 +47,7 @@
 GovCoordinator:
 - Admin of Voice Upgradeable Contract Implementation
 - Admin of Mute Upgradeable Contract Implementation
-- DAO of Voice Contract
+- DAO of Voice Contract & DAO of Mute Contract
 - VoiceGov of Governance Funding Contract
 
 GovFunding:

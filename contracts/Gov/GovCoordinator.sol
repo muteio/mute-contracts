@@ -76,23 +76,26 @@ contract GovCoordinator {
     event ProposalExecuted(uint256 id);
 
     constructor(address _voice, uint256 _votingPeriod) public {
-        quorumVotes = 6000e18; // 8750 voice (~20% of circ)
+        quorumVotes = 4000e18; //  (~10% of circ)
         proposalThreshold = 500e18; // 500 voice
         votingPeriod = _votingPeriod; //17280; // ~3 days in blocks (assuming 15s blocks)
 
         voice = IVoiceContract(_voice);
     }
 
+    // should only be called by itself through a proposal
     function changeQuorumVotes(uint256 _quorumVotes) public {
         require(msg.sender == address(this));
         quorumVotes = _quorumVotes;
     }
 
+    // should only be called by itself through a proposal
     function changeProposalThreshold(uint256 _proposalThreshold) public {
         require(msg.sender == address(this));
         proposalThreshold = _proposalThreshold;
     }
 
+    // should only be called by itself through a proposal
     function changeVotingPeriod(uint256 _votingPeriod) public {
         require(msg.sender == address(this));
         votingPeriod = _votingPeriod;
@@ -137,7 +140,7 @@ contract GovCoordinator {
         proposal.executed = true;
         (bool result, ) = address(proposal.target).call(proposal.data);
         if (!result) {
-            revert("Transaction Failed");
+            revert("GovCoordinator::execute: transaction Failed");
         }
         emit ProposalExecuted(proposalId);
     }

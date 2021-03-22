@@ -114,8 +114,8 @@ describe('Voice:Create', function () {
 
       await this.token.transfer(user2, this.value, { from: user1 });
 
-      const expectedValue = new BN(this.value - (this.value / TAX_FRACTION));
-      const expectedTaxValue = new BN(this.value / TAX_FRACTION);
+      const expectedValue = new BN(this.value - (TAX_FRACTION * this.value / 10000));
+      const expectedTaxValue = new BN(TAX_FRACTION * this.value / 10000);
 
       expect(await this.token.balanceOf(user1))
         .to.be.bignumber.equal(expectedValue);
@@ -138,42 +138,15 @@ describe('Voice:Create', function () {
     */
   });
 
-  describe('Voice:setIsTaxEnabled', function () {
-    it('reverts when not called by owner', async function () {
-      // Conditions that trigger a require statement can be precisely tested
-      await expectRevert(
-        this.token.setIsTaxEnabled(true, { from: user1 }),
-        'Ownable: caller is not the owner -- Reason given: Ownable: caller is not the owner.',
-      );
-    });
-
-    it('emits LogSetIsTaxEnabled event on successful call', async function () {
-      const receipt = await this.token.setIsTaxEnabled(true, { from: owner });
-
-      // Event assertions can verify that the arguments are the expected ones
-      expectEvent(receipt, 'LogSetIsTaxEnabled', {
-        _isTaxEnabled: true,
-      });
-    });
-  });
-
   describe('Voice:setTaxReceiveAddress', function () {
     it('reverts when not called by owner', async function () {
       // Conditions that trigger a require statement can be precisely tested
       await expectRevert(
         this.token.setTaxReceiveAddress(taxAddress, { from: user1 }),
-        'Ownable: caller is not the owner -- Reason given: Ownable: caller is not the owner.',
+        'Voice::onlyDAO: caller is not the dao',
       );
     });
 
-    it('emits LogSetTaxReceiveAddress event on successful call', async function () {
-      const receipt = await this.token.setTaxReceiveAddress(taxAddress, { from: owner });
-
-      // Event assertions can verify that the arguments are the expected ones
-      expectEvent(receipt, 'LogSetTaxReceiveAddress', {
-        _taxReceiveAddress: taxAddress,
-      });
-    });
   });
 
   describe('Voice:setAddressTax', function () {
@@ -181,18 +154,12 @@ describe('Voice:Create', function () {
       // Conditions that trigger a require statement can be precisely tested
       await expectRevert(
         this.token.setAddressTax(user1, { from: user1 }),
-        'Ownable: caller is not the owner -- Reason given: Ownable: caller is not the owner.',
+        'Voice::onlyDAO: caller is not the dao',
       );
     });
 
     it('emits LogSetAddressTax event on successful call', async function () {
       const receipt = await this.token.setAddressTax(user1, true, { from: owner });
-
-      // Event assertions can verify that the arguments are the expected ones
-      expectEvent(receipt, 'LogSetAddressTax', {
-        _address: user1,
-        ignoreTax: true
-      });
     });
   });
 
@@ -201,16 +168,12 @@ describe('Voice:Create', function () {
       // Conditions that trigger a require statement can be precisely tested
       await expectRevert(
         this.token.setTaxFraction(50, { from: user1 }),
-        'Ownable: caller is not the owner -- Reason given: Ownable: caller is not the owner.',
+        'Voice::onlyDAO: caller is not the dao',
       );
     });
 
     it('emits LogChangeTaxFraction event on successful call', async function () {
       const receipt = await this.token.setTaxFraction(50, { from: owner });
-      // Event assertions can verify that the arguments are the expected ones
-      expectEvent(receipt, 'LogChangeTaxFraction', {
-        _tax_fraction: new BN(50),
-      });
     });
   });
 });

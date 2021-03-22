@@ -86,26 +86,31 @@ contract GovFunding {
         mute = IMuteContract(_mute);
     }
 
+    // should only be called by itself, only proposals created by MUTE holders
     function changeQuorumVotes(uint256 _quorumVotes) public {
         require(msg.sender == address(this));
         quorumVotes = _quorumVotes;
     }
 
+    // should only be called by itself, only proposals created by MUTE holders
     function changeVotingPeriod(uint256 _votingPeriod) public {
         require(msg.sender == address(this));
         votingPeriod = _votingPeriod;
     }
 
+    // should only be called by itself, only proposals created by MUTE holders
     function changeVoteRequirement(uint256 _voteRequirement) public {
         require(msg.sender == address(this));
         voteRequirement = _voteRequirement;
     }
 
     function propose(address target, bytes memory data, string memory description) public returns (uint) {
-        // allow mute holders to change votingPeriod / quorumvotes / voteRequirement
+
         if(target != address(this)){
+          // not an internal target, only allow the govcoord contract
           require(msg.sender == voiceGov, "GovFunding::propose: only voice gov can propose");
         } else {
+          // allow mute holders to change votingPeriod / quorumvotes / voteRequirement
           require(mute.getPriorVotes(msg.sender, block.number.sub(1)) > voteRequirement, "GovFunding::propose: proposer votes below proposal threshold");
         }
 
@@ -145,7 +150,7 @@ contract GovFunding {
         proposal.executed = true;
         (bool result, ) = address(proposal.target).call(proposal.data);
         if (!result) {
-            revert("Transaction Failed");
+            revert("GovFunding::execute: transaction Failed");
         }
         emit ProposalExecuted(proposalId);
     }
@@ -193,7 +198,7 @@ contract GovFunding {
     function _castVote(address voter, uint256 proposalId, bool support) internal {
         require(state(proposalId) == ProposalState.Active, "GovFunding::_castVote: voting is closed");
 
-        require(mute.getPriorVotes(msg.sender, block.number.sub(1)) > voteRequirement, "GovFunding::propose: proposer votes below voter threshold");
+        require(mute.getPriorVotes(voter, block.number.sub(1)) > voteRequirement, "GovFunding::propose: proposer votes below voter threshold");
 
         Proposal storage proposal = proposals[proposalId];
         Receipt storage receipt = proposal.receipts[voter];

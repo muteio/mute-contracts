@@ -40,7 +40,7 @@ contract Mute is MuteGovernance {
     }
 
     modifier onlyDAO() {
-        require(_owner == msg.sender || _dao == msg.sender, "onlyDAO: caller is not the dao");
+        require(_owner == msg.sender || _dao == msg.sender, "Mute::onlyDAO: caller is not the dao");
         _;
     }
 
@@ -50,7 +50,7 @@ contract Mute is MuteGovernance {
         _name = "Mute.io";
         _symbol = "MUTE";
         _decimals = 18;
-        TAX_FRACTION = 1;
+        TAX_FRACTION = 100;
         vaultThreshold = 10000 * 10 ** 18;
         nonTaxedAddresses[msg.sender] = true;
     }
@@ -144,7 +144,7 @@ contract Mute is MuteGovernance {
           return;
         }
 
-        uint256 feeAmount = amount.mul(TAX_FRACTION).div(100);
+        uint256 feeAmount = amount.mul(TAX_FRACTION).div(10000);
         uint256 newAmount = amount.sub(feeAmount);
 
         require(amount == feeAmount.add(newAmount), "Mute: math is broken");

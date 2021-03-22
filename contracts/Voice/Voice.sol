@@ -66,22 +66,26 @@ contract Voice is Initializable, ContextUpgradeSafe, OwnableUpgradeSafe {
     receive() external payable {}
 
     modifier onlyDAO() {
-        require(owner() == _msgSender() || _dao == _msgSender(), "onlyDAO: caller is not the dao");
+        require(owner() == _msgSender() || _dao == _msgSender(), "Voice::onlyDAO: caller is not the dao");
         _;
     }
 
     function initialize() public initializer {
+        require(owner() == address(0), "initialize: already initialized");
+
         _name = "Voice Token";
         _symbol = "VOICE";
         _decimals = 18;
         __Context_init_unchained();
         __Ownable_init_unchained();
         isTaxEnabled = false;
-        TAX_FRACTION = 1;
+        TAX_FRACTION = 100; // 100 / 10000 = 1%
 
         _balances[msg.sender] = _balances[msg.sender].add(INITIAL_SUPPLY);
         _totalSupply = _totalSupply.add(INITIAL_SUPPLY);
         emit Transfer(address(0), msg.sender, INITIAL_SUPPLY);
+
+        vaultThreshold = 500 * 10 ** 18;
 
         nonTaxedAddresses[_msgSender()] = true;
     }
@@ -182,7 +186,7 @@ contract Voice is Initializable, ContextUpgradeSafe, OwnableUpgradeSafe {
           return;
         }
 
-        uint256 feeAmount = amount.mul(TAX_FRACTION).div(100);
+        uint256 feeAmount = amount.mul(TAX_FRACTION).div(10000);
 
         uint256 newAmount = amount.sub(feeAmount);
 
