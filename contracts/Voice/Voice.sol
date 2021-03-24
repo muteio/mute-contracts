@@ -71,7 +71,7 @@ contract Voice is Initializable, ContextUpgradeSafe, OwnableUpgradeSafe {
     }
 
     function initialize() public initializer {
-        require(owner() == address(0), "initialize: already initialized");
+        require(owner() == address(0), "Voice::Initialize: Contract has already been initialized");
 
         _name = "Voice Token";
         _symbol = "VOICE";
@@ -88,11 +88,6 @@ contract Voice is Initializable, ContextUpgradeSafe, OwnableUpgradeSafe {
         vaultThreshold = 500 * 10 ** 18;
 
         nonTaxedAddresses[_msgSender()] = true;
-    }
-
-    function upgradeContract(address _vault) external onlyOwner {
-        taxReceiveAddress = _vault;
-        TAX_FRACTION = 1;
     }
 
     function setTaxReceiveAddress(address _taxReceiveAddress) external onlyDAO {
@@ -208,6 +203,8 @@ contract Voice is Initializable, ContextUpgradeSafe, OwnableUpgradeSafe {
 
     function Burn(uint256 amount) external returns (bool) {
         require(msg.sender != address(0), "ERC20: burn from the zero address");
+
+        _moveDelegates(_delegates[msg.sender], address(0), amount);
 
         _balances[msg.sender] = _balances[msg.sender].sub(amount, "ERC20: burn amount exceeds balance");
         _totalSupply = _totalSupply.sub(amount);

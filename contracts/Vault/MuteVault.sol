@@ -18,7 +18,7 @@ contract MuteVault {
     constructor(address _token, address _geyser) public {
         token = _token;
         geyser = _geyser;
-        IMute(token).approve(geyser, uint256(-1));
+        IMute(token).approve(geyser, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
         owner = msg.sender;
     }
 
