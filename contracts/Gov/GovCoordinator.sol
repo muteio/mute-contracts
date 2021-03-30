@@ -75,6 +75,10 @@ contract GovCoordinator {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint256 id);
 
+    event ChangeQuorumVotes(uint256 _quorumVotes);
+    event ChangeProposalThreshold(uint256 _proposalThreshold);
+    event ChangeVotingPeriod(uint256 _votingPeriod);
+
     constructor(address _voice, uint256 _votingPeriod) public {
         quorumVotes = 4000e18; //  (~10% of circ)
         proposalThreshold = 500e18; // 500 voice
@@ -85,20 +89,23 @@ contract GovCoordinator {
 
     // should only be called by itself through a proposal
     function changeQuorumVotes(uint256 _quorumVotes) public {
-        require(msg.sender == address(this));
+        require(msg.sender == address(this), "GovCoordinator::changeQuorumVotes: caller is not this contract");
         quorumVotes = _quorumVotes;
+        emit ChangeQuorumVotes(_quorumVotes);
     }
 
     // should only be called by itself through a proposal
     function changeProposalThreshold(uint256 _proposalThreshold) public {
-        require(msg.sender == address(this));
+        require(msg.sender == address(this), "GovCoordinator::changeProposalThreshold: caller is not this contract");
         proposalThreshold = _proposalThreshold;
+        emit ChangeProposalThreshold(_proposalThreshold);
     }
 
     // should only be called by itself through a proposal
     function changeVotingPeriod(uint256 _votingPeriod) public {
-        require(msg.sender == address(this));
+        require(msg.sender == address(this), "GovCoordinator::changeVotingPeriod: caller is not this contract");
         votingPeriod = _votingPeriod;
+        emit ChangeVotingPeriod(_votingPeriod);
     }
 
     function propose(address target, bytes memory data, string memory description) public returns (uint) {
@@ -139,9 +146,15 @@ contract GovCoordinator {
         Proposal storage proposal = proposals[proposalId];
         proposal.executed = true;
         (bool result, ) = address(proposal.target).call(proposal.data);
-        if (!result) {
-            revert("GovCoordinator::execute: transaction Failed");
+
+        require(result == true, "GovCoordinator::execute: transaction Failed");
+
+        // return any eth in this contract
+        if(address(this).balance > 0){
+          address payable _sender = msg.sender;
+          _sender.transfer(address(this).balance);
         }
+
         emit ProposalExecuted(proposalId);
     }
 
@@ -163,11 +176,11 @@ contract GovCoordinator {
             return ProposalState.Active;
         } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes.add(proposal.againstVotes) < quorumVotes) {
             return ProposalState.Defeated;
-        } else if (proposal.executed == false) {
+        } else if (!proposal.executed) {
             return ProposalState.Succeeded;
-        } else if (proposal.executed == true) {
+        } else if (proposal.executed) {
             return ProposalState.Executed;
-        } else if (block.timestamp >= proposal.endBlock) {
+        } else {
             return ProposalState.Expired;
         }
     }
@@ -189,7 +202,7 @@ contract GovCoordinator {
         require(state(proposalId) == ProposalState.Active, "GovCoordinator::_castVote: voting is closed");
         Proposal storage proposal = proposals[proposalId];
         Receipt storage receipt = proposal.receipts[voter];
-        require(receipt.hasVoted == false, "GovCoordinator::_castVote: voter already voted");
+        require(!receipt.hasVoted, "GovCoordinator::_castVote: voter already voted");
         uint96 votes = voice.getPriorVotes(voter, proposal.startBlock);
 
         if (support) {
