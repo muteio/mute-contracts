@@ -69,7 +69,7 @@ contract GovCoordinator {
     mapping (address => uint) public latestProposalIds;
 
     /// @notice An event emitted when a new proposal is created
-    event ProposalCreated(uint256 id, address proposer, bytes data, uint256 startBlock, uint256 endBlock, string description);
+    event ProposalCreated(uint256 id, address proposer, address proposer, bytes data, uint256 startBlock, uint256 endBlock, string description);
     /// @notice An event emitted when a vote has been cast on a proposal
     event VoteCast(address voter, uint256 proposalId, bool support, uint256 votes);
     /// @notice An event emitted when a proposal has been executed in the Timelock
@@ -137,7 +137,7 @@ contract GovCoordinator {
         proposals[newProposal.id] = newProposal;
         latestProposalIds[newProposal.proposer] = newProposal.id;
 
-        emit ProposalCreated(newProposal.id, msg.sender, data, startBlock, endBlock, description);
+        emit ProposalCreated(newProposal.id, msg.sender, target, data, startBlock, endBlock, description);
         return newProposal.id;
     }
 
@@ -147,7 +147,7 @@ contract GovCoordinator {
         proposal.executed = true;
         (bool result, ) = address(proposal.target).call(proposal.data);
 
-        require(result == true, "GovCoordinator::execute: transaction Failed");
+        require(result, "GovCoordinator::execute: transaction Failed");
 
         // return any eth in this contract
         if(address(this).balance > 0){
